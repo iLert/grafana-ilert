@@ -8,149 +8,191 @@ import {
   AnnotationQueryRequest,
 } from '@grafana/data';
 
-import { FetchResponse, getBackendSrv } from "@grafana/runtime";
-import { IlertQuery, IlertDataSourceOptions, IlertResult } from './types';
+import { FetchResponse, getBackendSrv } from '@grafana/runtime';
+// import { defaults } from 'lodash';
+import {
+  IlertQuery,
+  IlertDataSourceOptions,
+  IlertResult,
+  // defaultQuery,
+  IlertIncident,
+  IlertQueryParams,
+} from './types';
 
 export class DataSource extends DataSourceApi<IlertQuery, IlertDataSourceOptions> {
-
+  private url: string;
   constructor(instanceSettings: DataSourceInstanceSettings<IlertDataSourceOptions>) {
     super(instanceSettings);
+    this.url = instanceSettings.url || '';
   }
 
   async query(options: DataQueryRequest<IlertQuery>): Promise<DataQueryResponse> {
+    const { range } = options;
+    const from = range!.from.valueOf();
+    const to = range!.to.valueOf();
 
-    const promises = options.targets.map((query) =>
-      this.doRequest(query).then((response) => {
+    const promises = options.targets.map(query => {
+      query.until = new Date(to).toISOString();
+      return this.doRequest(query).then(response => {
+        const incidentString = query.alias ? query.alias : 'incident';
         const frame = new MutableDataFrame({
           refId: query.refId,
           fields: [
-            { name: "Time", type: FieldType.time },
-            { name: "Value", type: FieldType.number },
+            { name: 'time', type: FieldType.time },
+            { name: incidentString, type: FieldType.number },
           ],
         });
 
-        response.data.forEach((point: any) => {
-          frame.appendRow([point.time, point.value]);
-        });
+        if (!response.data.length) {
+          return frame;
+        }
+
+        // duration of the time range, in milliseconds.
+        const duration = to - from;
+
+        // step determines how close in time (ms) the points will be to each other.
+        const step = duration / 1000;
+        const incidentsTimes = response.data.map(incident => ({
+          reportTime: incident.reportTime,
+          resolvedOn: incident.resolvedOn,
+        }));
+
+        for (let t = 0; t < duration; t += step) {
+          const time = from + t;
+          const value = incidentsTimes
+            .filter(incidentsTime => time > new Date(incidentsTime.reportTime).valueOf())
+            .filter(
+              incidentsTime =>
+                new Date(incidentsTime.resolvedOn).valueOf() === 0 ||
+                time < new Date(incidentsTime.resolvedOn).valueOf()
+            ).length;
+          const frameObject = {
+            time,
+            [incidentString]: value,
+          };
+          frame.add(frameObject);
+        }
 
         return frame;
-      })
-    );
+      });
+    });
 
-    return Promise.all(promises).then((data) => ({ data }));
+    return Promise.all(promises).then(data => ({ data }));
   }
 
   async testDatasource() {
-
     const query: IlertQuery = {
-      refId: "ilert-" + Date.now(),
-      queryText: "test",
+      refId: 'ilert-' + Date.now(),
     };
 
     try {
       const response = await this.doRequest(query);
 
       if (response.status === 200) {
-        return this.testResponse("success", response.status);
+        return this.testResponse('success', response.status, 'The Api Key is valid');
       } else {
-        return this.testResponse("error", response.status);
-
+        return this.testResponse('error', response.status, JSON.stringify(response.data));
       }
     } catch (error) {
-      return this.testResponse("success", error.status);
+      return this.testResponse('error', error.status, error.data.message);
     }
   }
 
-  transformResponse(response: FetchResponse<any>): IlertResult[] {
+  transformResponse(response: FetchResponse<IlertIncident[]>): IlertResult[] {
     const results: IlertResult[] = [];
-    for (var i = 0; i < response.data.incidents.length; i++) {
-      var d = response.data.incidents[i];
-      var created_at = Date.parse(d.created_at);
 
-      var annotation_end = (d.status === 'resolved') ? Date.parse(d.last_status_change_at) : Date.now();
+    if (!response.data.length) {
+      return results;
+    }
 
-      var incident = {
+    response.data.forEach(d => {
+      const created_at = Date.parse(d.reportTime);
+      const annotation_end = d.status === 'RESOLVED' ? Date.parse(d.nextEscalation) : Date.now();
+      const incident = {
+        id: d.id,
         annotation: {
-          name: d.id,
+          name: d.id + '',
           enabled: true,
-          datasource: "grafana-ilert"
+          datasource: 'iLert',
         },
-        title: d.title,
+        title: d.summary,
         time: created_at,
         isRegion: true,
         timeEnd: annotation_end,
-        tags: [d.type, d.incident_key, d.incident_number, d.status, d.service.id],
-        text: '<a target="_blank" href="' + d.html_url + '">iLert incident page</a>',
+        tags: [d.priority, d.incidentKey, d.status, d.alertSource.id] as string[],
+        text: d.details,
       };
-
-      incident.tags = incident.tags.filter(function (el) {
+      incident.tags = incident.tags.filter(function(el) {
         return el != null;
       });
 
       results.push(incident);
-    }
+    });
+
     return results;
   }
 
   annotationQuery(options: AnnotationQueryRequest<IlertQuery>) {
-    var queryString = "";
-    var limit = 100;
-
-    queryString += "&since=" + new Date(options.range.from.valueOf()).toISOString();
-    queryString += "&until=" + new Date(options.range.to.valueOf()).toISOString();
-    queryString += `&limit=${limit}`;
+    let queryString = '';
+    const limit = 100;
 
     if (options.annotation) {
+      const annotation = options.annotation;
 
-      const annotation = options.annotation
-
-      if (annotation.serviceId) {
-        queryString += "&service_ids%5B%5D=" + annotation.serviceId;
-      }
-
-      if (annotation.urgency) {
-        queryString += "&urgencies%5B%5D=" + annotation.urgency;
-      }
-
-      if (annotation.status) {
-        queryString += "&statuses%5B%5D=" + annotation.status;
+      if (annotation.state) {
+        queryString += '&statuses%5B%5D=' + annotation.state;
       }
     }
 
     return this.getEvents([], queryString, 0, limit);
   }
 
-  async getEvents(allResults: IlertResult[], queryString: string, offset: number, limit: number): Promise<IlertResult[]> {
-    queryString += `&offset=${offset}`;
+  async getEvents(
+    allResults: IlertResult[],
+    queryString: string,
+    offset: number,
+    limit: number
+  ): Promise<IlertResult[]> {
     const query: IlertQuery = {
-      refId: "ilert-" + Date.now(),
-      queryText: queryString,
+      refId: 'ilert-' + Date.now(),
     };
     const response = await this.doRequest(query);
     const result = this.transformResponse(response);
-    const newResults = allResults.concat(result);
 
-    if (response.data.more) {
-      return this.getEvents(newResults, queryString, limit + offset, limit);
-    } else {
-      return newResults;
-    }
+    return result;
   }
 
   async doRequest(query: IlertQuery) {
-    // TODO: Change any
-    return getBackendSrv().fetch<any>({
-      method: "GET",
-      url: "https://api.example.com/metrics" + query.queryText,
-      params: query,
-    }).toPromise();
+    const queryObject = {} as IlertQueryParams;
+
+    if (query.state) {
+      queryObject.state = query.state.toUpperCase();
+    }
+    if (query.urgency) {
+      queryObject.urgency = query.urgency;
+    }
+    if (query.from) {
+      queryObject.from = query.from;
+    }
+    if (query.until) {
+      queryObject.until = query.until;
+    }
+    if (query.limit) {
+      queryObject.limit = query.limit;
+    }
+
+    const queryString = new URLSearchParams(queryObject as any).toString();
+    return getBackendSrv().datasourceRequest<IlertIncident[]>({
+      method: 'GET',
+      url: this.url + '/incidents' + (queryString ? `?${queryString}` : ''),
+    });
   }
 
-  testResponse(status: string, code: number) {
+  testResponse(status: string, code: number, message: string) {
     return {
       status,
-      message: `Data source is not working (code: ${code})`,
+      message: `Code: ${code}. Message: ${message}`,
       title: status.toUpperCase(),
-    }
+    };
   }
 }

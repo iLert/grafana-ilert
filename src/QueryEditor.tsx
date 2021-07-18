@@ -11,39 +11,36 @@ const { FormField } = LegacyForms;
 type Props = QueryEditorProps<DataSource, IlertQuery, IlertDataSourceOptions>;
 
 export class QueryEditor extends PureComponent<Props> {
-  onQueryTextChange = (event: ChangeEvent<HTMLInputElement>) => {
+  onStateChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { onChange, query } = this.props;
-    onChange({ ...query, queryText: event.target.value });
+    const state = event.target.value === 'All' ? '' : event.target.value;
+    onChange({ ...query, state });
   };
 
-  onConstantChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, /* TODO constant: parseFloat(event.target.value)*/ });
-    // executes the query
-    onRunQuery();
+  onAliasChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { onChange, query } = this.props;
+    onChange({ ...query, alias: event.target.value });
   };
 
   render() {
     const query = defaults(this.props.query, defaultQuery);
-    const { queryText, /* TODO constant */ } = query;
+    const { state, alias } = query;
 
     return (
       <div className="gf-form">
         <FormField
-          width={4}
-          // TODO value={constant}
-          value={1}
-          onChange={this.onConstantChange}
-          label="Constant"
-          type="number"
-          step="0.1"
+          labelWidth={8}
+          value={state || 'All'}
+          onChange={this.onStateChange}
+          label="State"
+          tooltip="Incident State"
         />
         <FormField
           labelWidth={8}
-          value={queryText || ''}
-          onChange={this.onQueryTextChange}
-          label="Query Text"
-          tooltip="Not used yet"
+          value={alias || 'incident'}
+          onChange={this.onAliasChange}
+          label="Alias"
+          tooltip="Legend Alias"
         />
       </div>
     );

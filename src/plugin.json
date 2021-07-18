@@ -1,9 +1,10 @@
 {
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
   "type": "datasource",
-  "name": "grafana-ilert",
-  "id": "ilert-grafana-ilert-datasource",
+  "name": "iLert",
+  "id": "ilert-grafana-datasource",
   "metrics": true,
+  "annotations": false,
   "info": {
     "description": "Datasource Plugin for iLert",
     "author": {
@@ -12,8 +13,8 @@
     },
     "keywords": [],
     "logos": {
-      "small": "img/logo.svg",
-      "large": "img/logo.svg"
+      "small": "img/ilert-logo.png",
+      "large": "img/ilert-logo.png"
     },
     "links": [
       {
@@ -29,6 +30,26 @@
     "version": "%VERSION%",
     "updated": "%TODAY%"
   },
+  "routes": [
+    {
+      "path": "incidents",
+      "url": "https://api.ilert.com/api/v1/incidents",
+      "headers": [
+        {
+          "name": "Accept",
+          "content": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "content": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "content": "Bearer {{ .SecureJsonData.apiKey }}"
+        }
+      ]
+    }
+  ],
   "dependencies": {
     "grafanaDependency": ">=7.0.0",
     "plugins": []

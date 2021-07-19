@@ -58,7 +58,8 @@ export class ConfigEditor extends PureComponent<Props, State> {
               isConfigured={(secureJsonFields && secureJsonFields.apiKey) as boolean}
               value={secureJsonData.apiKey || ''}
               label="API Key"
-              placeholder="Content of API Key (without Bearer)"
+              placeholder="API Key only"
+              tooltip="API Key (without 'Bearer')"
               labelWidth={6}
               inputWidth={360}
               onReset={this.onApiKeyReset}

@@ -6,10 +6,12 @@ export interface IlertQuery extends DataQuery, IlertQueryParams {
 
 export interface IlertQueryParams {
   urgency?: string;
+  source?: string;
   state?: string;
   from?: string;
   until?: string;
   limit?: number;
+  'alert-source'?: number;
 }
 
 export const defaultQuery: Partial<IlertQuery> = {
@@ -21,6 +23,8 @@ export const defaultQuery: Partial<IlertQuery> = {
  */
 export interface IlertDataSourceOptions extends DataSourceJsonData {
   path?: string;
+  test?: string;
+  anotherTest?: string;
 }
 
 /**
@@ -42,6 +46,12 @@ export interface IlertResult {
   timeEnd: number;
   tags: string[];
   text: string;
+}
+
+export interface IlertAlertSource {
+  id: number;
+  name: string;
+  [key: string]: any;
 }
 
 export interface IlertIncident {

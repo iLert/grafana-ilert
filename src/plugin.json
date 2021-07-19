@@ -48,6 +48,24 @@
           "content": "Bearer {{ .SecureJsonData.apiKey }}"
         }
       ]
+    },
+    {
+      "path": "alert-sources",
+      "url": "https://api.ilert.com/api/v1/alert-sources",
+      "headers": [
+        {
+          "name": "Accept",
+          "content": "application/json"
+        },
+        {
+          "name": "Content-Type",
+          "content": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "content": "Bearer {{ .SecureJsonData.apiKey }}"
+        }
+      ]
     }
   ],
   "dependencies": {

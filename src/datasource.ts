@@ -5,31 +5,34 @@ import {
   DataSourceInstanceSettings,
   MutableDataFrame,
   FieldType,
-  AnnotationQueryRequest,
 } from '@grafana/data';
 
-import { FetchResponse, getBackendSrv } from '@grafana/runtime';
-// import { defaults } from 'lodash';
-import {
-  IlertQuery,
-  IlertDataSourceOptions,
-  IlertResult,
-  // defaultQuery,
-  IlertIncident,
-  IlertQueryParams,
-} from './types';
+import { getBackendSrv } from '@grafana/runtime';
+
+import { IlertQuery, IlertDataSourceOptions, IlertIncident, IlertQueryParams, IlertAlertSource } from './types';
+
+interface AlertSource {
+  id: number;
+  name: string;
+}
 
 export class DataSource extends DataSourceApi<IlertQuery, IlertDataSourceOptions> {
   private url: string;
+  alertSources: AlertSource[];
   constructor(instanceSettings: DataSourceInstanceSettings<IlertDataSourceOptions>) {
     super(instanceSettings);
     this.url = instanceSettings.url || '';
+    this.alertSources = [];
   }
 
   async query(options: DataQueryRequest<IlertQuery>): Promise<DataQueryResponse> {
     const { range } = options;
     const from = range!.from.valueOf();
     const to = range!.to.valueOf();
+
+    if (!this.alertSources.length) {
+      await this.setAlertSources();
+    }
 
     const promises = options.targets.map(query => {
       query.until = new Date(to).toISOString();
@@ -52,20 +55,30 @@ export class DataSource extends DataSourceApi<IlertQuery, IlertDataSourceOptions
 
         // step determines how close in time (ms) the points will be to each other.
         const step = duration / 1000;
-        const incidentsTimes = response.data.map(incident => ({
+        const incidentsSimpler = response.data.map(incident => ({
           reportTime: incident.reportTime,
           resolvedOn: incident.resolvedOn,
+          status: incident.status,
         }));
 
         for (let t = 0; t < duration; t += step) {
           const time = from + t;
-          const value = incidentsTimes
-            .filter(incidentsTime => time > new Date(incidentsTime.reportTime).valueOf())
-            .filter(
-              incidentsTime =>
-                new Date(incidentsTime.resolvedOn).valueOf() === 0 ||
-                time < new Date(incidentsTime.resolvedOn).valueOf()
-            ).length;
+          const value = incidentsSimpler.filter(incident => {
+            if (time > new Date(incident.reportTime).valueOf()) {
+              return true;
+            }
+
+            if (incident.status === 'RESOLVED') {
+              if (query.state?.toUpperCase() === 'RESOLVED') {
+                return true;
+              }
+              if (time < new Date(incident.resolvedOn).valueOf()) {
+                return true;
+              }
+            }
+
+            return false;
+          }).length;
           const frameObject = {
             time,
             [incidentString]: value,
@@ -98,71 +111,7 @@ export class DataSource extends DataSourceApi<IlertQuery, IlertDataSourceOptions
     }
   }
 
-  transformResponse(response: FetchResponse<IlertIncident[]>): IlertResult[] {
-    const results: IlertResult[] = [];
-
-    if (!response.data.length) {
-      return results;
-    }
-
-    response.data.forEach(d => {
-      const created_at = Date.parse(d.reportTime);
-      const annotation_end = d.status === 'RESOLVED' ? Date.parse(d.nextEscalation) : Date.now();
-      const incident = {
-        id: d.id,
-        annotation: {
-          name: d.id + '',
-          enabled: true,
-          datasource: 'iLert',
-        },
-        title: d.summary,
-        time: created_at,
-        isRegion: true,
-        timeEnd: annotation_end,
-        tags: [d.priority, d.incidentKey, d.status, d.alertSource.id] as string[],
-        text: d.details,
-      };
-      incident.tags = incident.tags.filter(function(el) {
-        return el != null;
-      });
-
-      results.push(incident);
-    });
-
-    return results;
-  }
-
-  annotationQuery(options: AnnotationQueryRequest<IlertQuery>) {
-    let queryString = '';
-    const limit = 100;
-
-    if (options.annotation) {
-      const annotation = options.annotation;
-
-      if (annotation.state) {
-        queryString += '&statuses%5B%5D=' + annotation.state;
-      }
-    }
-
-    return this.getEvents([], queryString, 0, limit);
-  }
-
-  async getEvents(
-    allResults: IlertResult[],
-    queryString: string,
-    offset: number,
-    limit: number
-  ): Promise<IlertResult[]> {
-    const query: IlertQuery = {
-      refId: 'ilert-' + Date.now(),
-    };
-    const response = await this.doRequest(query);
-    const result = this.transformResponse(response);
-
-    return result;
-  }
-
-  async doRequest(query: IlertQuery) {
+  doRequest(query: IlertQuery) {
     const queryObject = {} as IlertQueryParams;
 
     if (query.state) {
@@ -180,12 +129,27 @@ export class DataSource extends DataSourceApi<IlertQuery, IlertDataSourceOptions
     if (query.limit) {
       queryObject.limit = query.limit;
     }
+    if (query['alert-source']) {
+      queryObject['alert-source'] = query['alert-source'];
+    }
 
     const queryString = new URLSearchParams(queryObject as any).toString();
     return getBackendSrv().datasourceRequest<IlertIncident[]>({
       method: 'GET',
       url: this.url + '/incidents' + (queryString ? `?${queryString}` : ''),
     });
+  }
+
+  async setAlertSources() {
+    const response = await getBackendSrv().datasourceRequest<IlertAlertSource[]>({
+      method: 'GET',
+      url: this.url + '/alert-sources',
+    });
+
+    this.alertSources = response.data.map(alertSource => ({
+      id: alertSource.id,
+      name: alertSource.name,
+    }));
   }
 
   testResponse(status: string, code: number, message: string) {

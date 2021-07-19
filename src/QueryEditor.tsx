@@ -1,20 +1,24 @@
 import defaults from 'lodash/defaults';
 
 import React, { ChangeEvent, PureComponent } from 'react';
-import { LegacyForms } from '@grafana/ui';
-import { QueryEditorProps } from '@grafana/data';
+import { InlineFormLabel, LegacyForms } from '@grafana/ui';
+import { QueryEditorProps, SelectableValue } from '@grafana/data';
 import { DataSource } from './datasource';
 import { defaultQuery, IlertDataSourceOptions, IlertQuery } from './types';
 
-const { FormField } = LegacyForms;
+const { FormField, Select } = LegacyForms;
 
 type Props = QueryEditorProps<DataSource, IlertQuery, IlertDataSourceOptions>;
 
 export class QueryEditor extends PureComponent<Props> {
-  onStateChange = (event: ChangeEvent<HTMLInputElement>) => {
+  onStateChange = (selectable: SelectableValue<string>) => {
     const { onChange, query } = this.props;
-    const state = event.target.value === 'All' ? '' : event.target.value;
-    onChange({ ...query, state });
+    onChange({ ...query, state: selectable.value });
+  };
+
+  onSourceChange = (selectable: SelectableValue<string>) => {
+    const { onChange, query } = this.props;
+    onChange({ ...query, 'alert-source': parseInt(selectable.value || '', 10) });
   };
 
   onAliasChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -25,15 +29,42 @@ export class QueryEditor extends PureComponent<Props> {
   render() {
     const query = defaults(this.props.query, defaultQuery);
     const { state, alias } = query;
+    const currentAlertSource = query['alert-source'];
+    const alertSources = this.props.datasource.alertSources;
+
+    const statusSelectable = [
+      { label: 'All', value: '' },
+      { label: 'Pending', value: 'PENDING' },
+      { label: 'Accepted', value: 'ACCEPTED' },
+      { label: 'Resolved', value: 'RESOLVED' },
+    ] as Array<SelectableValue<string>>;
+
+    const alertSourceSelectable = [{ label: 'All', value: '' }].concat(
+      alertSources.map(alertSource => ({
+        label: alertSource.name,
+        value: alertSource.id.toString(),
+      }))
+    ) as Array<SelectableValue<string>>;
 
     return (
       <div className="gf-form">
-        <FormField
-          labelWidth={8}
-          value={state || 'All'}
+        <InlineFormLabel className="width-10" tooltip="Incident Status">
+          Status
+        </InlineFormLabel>
+        <Select
+          className="width-10"
+          value={statusSelectable.find(status => status.value === (state || ''))}
+          options={statusSelectable}
           onChange={this.onStateChange}
-          label="State"
-          tooltip="Incident State"
+        />
+        <InlineFormLabel className="width-10" tooltip="Alert Source Filter">
+          Alert Source
+        </InlineFormLabel>
+        <Select
+          className="width-10"
+          value={alertSourceSelectable.find(alertSource => alertSource.value === (currentAlertSource || ''))}
+          options={alertSourceSelectable}
+          onChange={this.onSourceChange}
         />
         <FormField
           labelWidth={8}

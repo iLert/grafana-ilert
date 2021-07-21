@@ -30,7 +30,7 @@ export interface IlertDataSourceOptions extends DataSourceJsonData {
 /**
  * Value that is used in the backend; but never sent over HTTP to the frontend
  */
-export interface MySecureJsonData {
+export interface IlertSecureJsonData {
   apiKey?: string;
 }
 

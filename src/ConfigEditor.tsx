@@ -1,7 +1,7 @@
 import React, { ChangeEvent, PureComponent } from 'react';
 import { LegacyForms } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
-import { IlertDataSourceOptions, MySecureJsonData } from './types';
+import { IlertDataSourceOptions, IlertSecureJsonData } from './types';
 
 const { SecretFormField } = LegacyForms;
 
@@ -48,7 +48,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
   render() {
     const { options } = this.props;
     const { secureJsonFields } = options;
-    const secureJsonData = (options.secureJsonData || {}) as MySecureJsonData;
+    const secureJsonData = (options.secureJsonData || {}) as IlertSecureJsonData;
 
     return (
       <div className="gf-form-group">

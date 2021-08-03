@@ -1,0 +1,19 @@
+version: "3"
+services:
+  grafana:
+    image: grafana/grafana:8.0.6
+    container_name: grafana
+    ports:
+      - 9000:3000
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/provisioning:/etc/grafana/provisioning
+      - ./docker/grafana.ini:/etc/grafana/grafana.ini
+      - ./dist:/var/lib/grafana/plugins/ilert-grafana-datasource
+    environment:
+        GF_AUTH_DISABLE_LOGIN_FORM: "true"
+        GF_AUTH_ANONYMOUS_ENABLED: "true"
+        GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+
+volumes:
+  grafana-data: {}

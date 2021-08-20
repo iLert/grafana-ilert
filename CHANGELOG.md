@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2
+
+Fix plugin version
+
 ## 1.0.1
 
 Fix github actions

@@ -1,6 +1,6 @@
 {
   "name": "ilert-grafana-ilert",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Datasource Plugin for iLert",
   "scripts": {
     "build": "grafana-toolkit plugin:build",

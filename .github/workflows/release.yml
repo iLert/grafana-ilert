@@ -2,8 +2,9 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*' # Run workflow on version tags, e.g. v1.0.0.
+    branches: [master]
+    paths:
+      - 'VERSION' # Run workflow on version change, e.g. 1.0.0
 
 jobs:
   release:

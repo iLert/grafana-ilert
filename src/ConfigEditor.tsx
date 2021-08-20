@@ -59,7 +59,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
               value={secureJsonData.apiKey || ''}
               label="API Key"
               placeholder="API Key only"
-              tooltip="API Key (without 'Bearer')"
+              tooltip="The iLert API Key. Each user may create API keys using the iLert web application. Note: Make sure you paste the API key without the Bearer prefix."
               labelWidth={6}
               inputWidth={360}
               onReset={this.onApiKeyReset}

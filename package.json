@@ -8,7 +8,9 @@
     "dev": "grafana-toolkit plugin:dev",
     "watch": "grafana-toolkit plugin:dev --watch",
     "sign": "grafana-toolkit plugin:sign",
-    "start": "yarn watch"
+    "start": "yarn watch",
+    "start:dev": "docker-compose pull && docker-compose up -d",
+    "stop:dev": "docker-compose down"
   },
   "author": "iLert",
   "license": "Apache-2.0",

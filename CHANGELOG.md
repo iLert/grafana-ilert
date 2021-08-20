@@ -1,10 +1,6 @@
 # Changelog
 
-## 1.0.2
-
-Fix plugin version
-
-## 1.0.1
+## 1.0.1, 1.0.2, 1.0.3
 
 Fix github actions
 

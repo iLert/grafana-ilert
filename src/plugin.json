@@ -29,7 +29,7 @@
     "screenshots": [
       {
         "name": "Overview",
-        "path": "https://raw.githubusercontent.com/iLert/grafana-ilert/master/docs/assets/ilert-plugins.png"
+        "path": "../docs/assets/ilert-plugins.png"
       }
     ],
     "version": "%VERSION%",

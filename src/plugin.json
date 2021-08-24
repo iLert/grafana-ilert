@@ -29,7 +29,7 @@
     "screenshots": [
       {
         "name": "Overview",
-        "path": "../docs/assets/ilert-plugins.png"
+        "path": "img/screenshot.png"
       }
     ],
     "version": "%VERSION%",

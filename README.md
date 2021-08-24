@@ -1,8 +1,8 @@
-# iLert Data Source Plugin 
+# iLert Data Source Plugin
 
 Data Source Plugins for Incidents in iLert
 
-![preview](docs/assets/ilert-plugins.png)
+![preview](https://raw.githubusercontent.com/iLert/grafana-ilert/master/docs/assets/ilert-plugins.png)
 
 ## How to use
 

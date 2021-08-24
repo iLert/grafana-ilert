@@ -11,7 +11,7 @@
       "name": "iLert",
       "url": "https://www.ilert.com/"
     },
-    "keywords": [],
+    "keywords": ["on-call", "alerting", "incident", "uptime"],
     "logos": {
       "small": "img/ilert-logo-icon.png",
       "large": "img/ilert-logo.png"
@@ -26,7 +26,12 @@
         "url": "https://github.com/iLert/grafana-ilert/blob/master/LICENSE"
       }
     ],
-    "screenshots": [],
+    "screenshots": [
+      {
+        "name": "Overview",
+        "path": "https://raw.githubusercontent.com/iLert/grafana-ilert/master/docs/assets/ilert-plugins.png"
+      }
+    ],
     "version": "%VERSION%",
     "updated": "%TODAY%"
   },
